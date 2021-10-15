@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Server</title>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: "Press Start 2P", Times, serif;
+    }
+
+    button {
+      background-color: white;
+      border: none;
+      color: black;
+      padding: 5px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-family: "Press Start 2P", Times, serif;
+    }
+
+    input[type='button'] {
+      background-color: red;
+      border: none;
+      color: white;
+      padding: 5px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-family: "Press Start 2P", Times, serif;
+    }
+
+    div {
+      padding: 10px;
+    }
+
+    #log::-webkit-scrollbar {
+      width: 8px;
+      height: 3px;
+    }
+
+    #log::-webkit-scrollbar-track {
+      background-color: #646464;
+    }
+
+    #log::-webkit-scrollbar-track-piece {
+      background-color: #000;
+    }
+
+    #log::-webkit-scrollbar-thumb {
+      height: 50px;
+      background-color: #666;
+      border-radius: 3px;
+    }
+
+    #log::-webkit-scrollbar-corner {
+      background-color: #646464;
+    }
+
+    #log::-webkit-resizer {
+      background-color: #666;
+    }
+  </style>
+  <script src="../javascripts/jquery-3.3.1.min.js"></script>
+  <script src="./socket.io/socket.io.js"></script>
+  <script>
+    var socket, port;
+
+    function log(msg, c) {
+      var t = new Date();
+      var ts = t.toLocaleTimeString('it-IT');
+      $('#log')[0].innerHTML += `[${ts}] <span style='color:${c}'>${msg}</span><br />`;
+      $("#log").animate({
+        scrollTop: $('#log').prop("scrollHeight")
+      }, 500);
+    };
+    $(document).ready(function() {
+      socket = io.connect();
+      port = window.location.port;
+      $('#port').text(port);
+      socket.emit('receiveServerConnected');
+
+      socket.on('connect', data => {
+        log(`Server online. (Port ${port})`, 'red');
+        log(`Waiting for <span onclick="$('#b0').click()">player 0</span>.`, 'grey');
+      });
+
+      socket.on('updateResetServer', data => {
+        log(`Server online. (Port ${port})`, 'red');
+        log(`Waiting for <span onclick="$('#b0').click()">player 0</span>.`, 'grey');
+      });
+
+      socket.on('disconnect', data => {
+        log(`Server offline.`, 'red');
+      });
+
+      socket.on('updateServerConnected', data => {
+        if (data)
+          data.forEach(i => {
+            log(`Player ${i} Joined.`, 'green');
+            $('#b' + i).css('background-color', 'green');
+          });
+      });
+
+      socket.on('updateJoin', data => {
+        log(`Player ${data} Joined.`, 'green');
+        $('#b' + data).css('background-color', 'green');
+        if (data == 0) log(`Other players can join now.`, 'grey');
+      });
+
+      socket.on('updatePickup', data => {
+        log(`Player ${data.index} collected ${data.prop}.`, 'cyan');
+      });
+
+      socket.on('updateTurnDoor', data => {
+        if (!data.name) return;
+        log(`Player ${data.index} turned ${data.name}.`, 'cyan');
+      });
+
+    });
+
+    function clearlog() {
+      $('#log').empty();
+    }
+
+    function resetServer() {
+      log(`Attempt to reset server.`, 'orange');
+      $('input[type="button"]').css('background-color', 'red');
+      socket.emit('receiveResetGame');
+    }
+  </script>
+</head>
+
+<body>
+  <h3>Server Panel<br />(Port: <span id="port"></span>)</h3>
+  <div id="control">
+    <div>
+      <input id="b0" type="button" onclick="window.open('../?0');return false;" value="Player 0" />
+      <input id="b1" type="button" onclick="window.open('../?1');return false;" value="Player 1" />
+      <input id="b2" type="button" onclick="window.open('../?2');return false;" value="Player 2" />
+    </div>
+    <div>
+      <button type="button" onclick="resetServer()">Reset Server</button>
+      <button type="button" onclick="clearlog()">Clear Log</button></div>
+  </div>
+  <div id="log" style="overflow-y: scroll; height:300px;"></div>
+</body>
+
+</html>
